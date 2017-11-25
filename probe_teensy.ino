@@ -33,8 +33,7 @@ static int initialState = 0;
 #define PROBE 2
 #define CALIB 3
 
-bool debug = true;
-bool logging = true;
+bool debug = false;
 
 void setup() {
   setupLoadCell();
@@ -56,7 +55,7 @@ void loop() {
     startupDelay = false;
   }
 
-  serialControl();
+  if (debug) serialControl();
   readSwitches();
   stateMachine();
   runROS();
@@ -203,7 +202,7 @@ void probe()
 
   else if (getRawForce() > forceLimit) exitProbe(3);
 
-  if (logging && readyToRead()) logValues();
+  if (debug && readyToRead()) logValues();
 }
 
 void exitProbe(int exitCode) {
@@ -215,12 +214,10 @@ void exitProbe(int exitCode) {
     case 0:
       if (debug) Serial.println("Force Derivative Limit Exceeded");
       object = true;
-      logValues();
       break;
     case 1:
       if (debug) Serial.println("Max Calibration Force Exceeded");
       object = true;
-      logValues();
       break;
     case 2:
       if (debug) Serial.println("End of Linear Travel");
