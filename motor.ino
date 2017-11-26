@@ -45,7 +45,7 @@ void setMotorZero() {
 }
 
 float getRawMotorPosition() {
-  return (enc.read()*motorDirection*leadScrewPitch)/(countsPerRotation*gearRatio);
+  return (enc.read()*motorDirection*leadScrewPitch)/float(countsPerRotation*gearRatio);
 }
 
 float getMotorPosition() {

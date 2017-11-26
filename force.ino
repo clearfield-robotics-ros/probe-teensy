@@ -3,11 +3,16 @@ float loadValue = 0.0f;
 float dloadValuedt = 0.0f;
 long int lastTime = 0;
 
+RunningAverage forceFilter(5); // samples
+RunningAverage forceDerivativeFilter(5); // samples
+
 void setupLoadCell() {
   // Determined with Matlab Script
   loadCell.set_scale(67590.7657); // 1/gain
   loadCell.set_offset(-0.8384);
   attachInterrupt(digitalPinToInterrupt(DAT), readForce, FALLING);
+  forceFilter.clear();
+  forceDerivativeFilter.clear();
 }
 
 bool newValue = false;
@@ -23,6 +28,9 @@ void readForce() { // ISR
     float incoming = loadCell.get_value();
     dloadValuedt = (incoming - loadValue) / (dt) * 1000;
     loadValue = incoming;
+
+    forceFilter.addValue(loadValue);
+    forceDerivativeFilter.addValue(dloadValuedt);
 
     lastTime = time;
   }
@@ -41,7 +49,7 @@ float getRawForce() {
 }
 
 float getForce() {
-  return getRawForce() - tare;
+  return forceFilter.getAverage() - tare;
 }
 
 float getAbsForce() {
@@ -51,9 +59,12 @@ float getAbsForce() {
 }
 
 float getForceDerivative() {
-  return dloadValuedt; // kg/s
+//  return dloadValuedt; // kg/s
+  return forceDerivativeFilter.getAverage();
 }
 
 float getNormalizedForceDerivative() {
-  return dloadValuedt / speedAdjustment; // kg/s
+  return getForceDerivative() / speedAdjustment; // kg/s
 }
+
+

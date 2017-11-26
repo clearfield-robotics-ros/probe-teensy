@@ -5,10 +5,11 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Int16.h>
-#include <std_msgs/UInt16MultiArray.h>
+#include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/MultiArrayLayout.h>
 #include <std_msgs/MultiArrayDimension.h>
 #include <Encoder.h>
+#include <RunningAverage.h>
 #include <HX711.h>
 
 #define UPPER_SWITCH_PIN 20
@@ -39,34 +40,27 @@ void setup() {
   setupLoadCell();
   setupMotor();
   setupSwitches();
-  setupROS();
+  if (!debug) setupROS();
+  setState(initialState);
   pinMode(13, OUTPUT);
   Serial.begin(9600);
 }
 
-int startupDelay = true;
-
 void loop() {
-
-  if (startupDelay) {
-    delay(1500);
-    digitalWrite(13, HIGH);
-    setState(initialState);
-    startupDelay = false;
-  }
-
+  digitalWrite(13, HIGH);
   if (debug) serialControl();
   readSwitches();
   stateMachine();
-  runROS();
+  if (!debug) runROS();
 }
 
 ///////////////////////
 // ZEROING FUNCTIONS //
 ///////////////////////
 
+bool firstZero = true;
 long unsigned int zeroTime = 0;
-static unsigned int maxZeroTime = 500; //ms
+static unsigned int alottedZeroTime = 500; //ms
 bool recordTime = false;
 
 void enterZero() {
@@ -77,11 +71,16 @@ void enterZero() {
 }
 
 void zero() {
-  if (!upperSwitch()) {
-    runMotor(-100); // retract at 75%
+  if (!upperSwitch() && firstZero) {
+    runMotor(-30); // retract slowly for first zero
+  }
+  else if (!upperSwitch() && !firstZero) {
+    if (getMotorPosition() > 50) runMotor(-100); // run fast till close to zero
+    else runMotor(-(getMotorPosition() + 50));
   }
   else {
     runMotor(0);
+    firstZero = false;
 
     if (!recordTime) {
       zeroTime = millis();
@@ -91,7 +90,7 @@ void zero() {
     tare += getRawForce();
     ++tareSamples;
 
-    if ( (millis() - zeroTime) > maxZeroTime) {
+    if ( (millis() - zeroTime) > alottedZeroTime) {
       tare = tare / tareSamples;
       if (debug) {
         Serial.print("Limit Switch Found at ");
@@ -141,7 +140,7 @@ void calibration() {
   if (getForce() > maxCalibForce)
     maxCalibForce = getForce();
 
-  if (debug) {
+  if (debug && readyToRead()) {
     Serial.print("Max Force: ");
     Serial.println(maxCalibForce);
   }
@@ -156,7 +155,7 @@ void calibration() {
   }
   else if (getRawForce() > forceLimit) {
     if (debug)
-      Serial.println("EVENT: Exited because safe load cell force exceeded, Try Again!");
+      Serial.println("Exited because safe load cell force exceeded");
     setState(ZERO);
   }
 }
@@ -170,9 +169,10 @@ static float speedReductionFactor = 0.0f;
 float speedAdjustment;
 
 static float classificationThreshold = 20.0f;
-static float maxCalibForceMultiplier = 1.5f;
+static float calibForceFactor = 1.5f;
 
 bool object = false;
+bool probeConfirm = false;
 
 void enterProbe() {
 
@@ -184,23 +184,31 @@ void enterProbe() {
     if (debug) Serial.println("Entering Probe State");
     speedReductionFactor = (1 - finalPWM) / (finalPWM * maxCalibForce);
     object = false;
+    probeConfirm = false;
   }
 }
 
 void probe()
 {
+
   speedAdjustment = 1 / (getAbsForce() * speedReductionFactor + 1);
   runMotor(100 * speedAdjustment);
 
+  if (getNormalizedForceDerivative() > classificationThreshold
+      && getAbsForce() > maxCalibForce * 0.05) {
+    if (!probeConfirm) {
+      probeConfirm = true;
+      if (debug) Serial.println("Probe Confirming...");
+      runMotor(0);
+      delay(100);
+    }
+    else exitProbe(0);
+  }
 
-  // Exit Conditions
-  if (getNormalizedForceDerivative() > classificationThreshold) exitProbe(0);
-
-  else if (getAbsForce() > (maxCalibForce * maxCalibForceMultiplier)) exitProbe(1);
-
-  else if (lowerSwitch()) exitProbe(2);
-
-  else if (getRawForce() > forceLimit) exitProbe(3);
+  // secondary exit conditions
+  if (getAbsForce() > (maxCalibForce * calibForceFactor))   exitProbe(1);
+  else if (lowerSwitch())                                   exitProbe(2);
+  else if (getRawForce() > forceLimit)                      exitProbe(3);
 
   if (debug && readyToRead()) logValues();
 }
@@ -228,7 +236,7 @@ void exitProbe(int exitCode) {
       break;
   }
 
-  ROSContactMsg();
+  if (!debug) ROSContactMsg();
 }
 
 bool objectFound() {
