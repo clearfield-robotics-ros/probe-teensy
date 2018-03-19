@@ -6,7 +6,7 @@ void stateMachine() {
       break;
     case IDLE: idle();
       break;
-    case PROBE: probe();
+    case PROBE: performProbe();
       break;
     case CALIB: calibration();
     default:

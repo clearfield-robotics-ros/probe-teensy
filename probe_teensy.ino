@@ -8,6 +8,8 @@
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/MultiArrayLayout.h>
 #include <std_msgs/MultiArrayDimension.h>
+#include <probe/probe_data.h>
+
 #include <Encoder.h>
 #include <RunningAverage.h>
 #include <HX711.h>
@@ -43,7 +45,7 @@ void setup() {
   if (!debug) setupROS();
   setState(initialState);
   pinMode(13, OUTPUT);
-  Serial.begin(9600);
+  Serial.begin(9600); 
 }
 
 void loop() {
@@ -188,7 +190,7 @@ void enterProbe() {
   }
 }
 
-void probe()
+void performProbe()
 {
 
   speedAdjustment = 1 / (getAbsForce() * speedReductionFactor + 1);
