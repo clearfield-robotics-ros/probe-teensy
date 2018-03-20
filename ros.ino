@@ -4,7 +4,7 @@ ros::NodeHandle nh;
 geometry_msgs::TransformStamped t;
 tf::TransformBroadcaster broadcaster;
 
-char probe_tip[] = "/probe_tip";
+char probe_tip[] = "/probe_car";
 char probe_base[] = "/probe_base";
 
 probe::probe_data probe_status_reply;
