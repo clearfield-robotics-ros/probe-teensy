@@ -67,4 +67,14 @@ float getNormalizedForceDerivative() {
   return getForceDerivative() / speedAdjustment; // kg/s
 }
 
+float getContactForce() {
+
+  if (getMotorSpeed() > 0.05)
+    return getForceDerivative() / getMotorSpeed();
+  else {
+//    Serial.println("adjusted");
+    return getForceDerivative();
+  }
+}
+
 

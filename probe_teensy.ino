@@ -5,9 +5,6 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Int16.h>
-//#include <std_msgs/Int16MultiArray.h>
-//#include <std_msgs/MultiArrayLayout.h>
-//#include <std_msgs/MultiArrayDimension.h>
 #include <probe/probe_data.h>
 
 #include <ros/time.h>
@@ -40,7 +37,7 @@ static int initialState = 0;
 #define PROBE 2
 #define CALIB 3
 
-bool debug = false;
+bool debug = true;
 
 void setup() {
   setupLoadCell();
@@ -57,6 +54,7 @@ void loop() {
   if (debug) serialControl();
   readSwitches();
   stateMachine();
+  updateMotorSpeed();
   if (!debug) runROS();
 }
 
@@ -129,8 +127,8 @@ void idle()
 // CALIBRATION FUNCTIONS //
 ///////////////////////////
 
-static float forceLimit = 10.0f; // safety
-float maxCalibForce = 0.0f;      // hardcoded for speed of demo
+static float forceLimit = 8.0f;   // safety
+float maxCalibForce = 0.0f;       // hardcoded for speed of demo
 bool calibrated = false;          // hardcoded for speed of demo
 
 void enterCalibration() {
@@ -162,6 +160,7 @@ void calibration() {
   else if (getRawForce() > forceLimit) {
     if (debug)
       Serial.println("Exited because safe load cell force exceeded");
+    calibrated = true;
     setState(ZERO);
   }
 }
@@ -174,7 +173,7 @@ static float finalPWM = 0.3f;
 static float speedReductionFactor = 0.0f;
 float speedAdjustment;
 
-static float classificationThreshold = 20.0f;
+static float classificationThreshold = 40.0f;
 static float calibForceFactor = 1.5f;
 
 bool object = false;
@@ -200,13 +199,13 @@ void performProbe()
   speedAdjustment = 1 / (getAbsForce() * speedReductionFactor + 1);
   runMotor(100 * speedAdjustment);
 
-  if (getNormalizedForceDerivative() > classificationThreshold
+  if (getContactForce() > classificationThreshold
       && getAbsForce() > maxCalibForce * 0.05) {
     if (!probeConfirm) {
       probeConfirm = true;
       if (debug) Serial.println("Probe Confirming...");
       runMotor(0);
-      delay(100);
+//      delay(100);
     }
     else exitProbe(0);
   }
@@ -256,8 +255,14 @@ void logValues() {
   Serial.print("\t");
   Serial.print(speedAdjustment);
   Serial.print("\t");
+  Serial.print(getMotorSpeed());
+  Serial.print("\t");
   Serial.print(getForce());
   Serial.print("\t");
-  Serial.println(getNormalizedForceDerivative());
+  Serial.print(getForceDerivative());
+  Serial.print("\t");
+  Serial.print(getNormalizedForceDerivative());
+  Serial.print("\t");
+  Serial.println(getContactForce());
 }
 

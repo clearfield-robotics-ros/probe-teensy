@@ -52,8 +52,31 @@ float getMotorPosition() {
   return getRawMotorPosition() - zeroPosition;
 }
 
+// ADJUSTED MOTOR SPEED
+long int lastTimeSpeed = 0;
+float lastMotorPosition = 0;
+float motorSpeed = 0;
+
+void updateMotorSpeed() {
+ 
+  long int currTime = millis();
+  double dt = (currTime - lastTimeSpeed);
+
+  if (dt > 10) { 
+    
+    float currPos = getMotorPosition();
+    float dpos = (currPos - lastMotorPosition);
+    
+    motorSpeed = dpos/dt;
+    
+    lastTimeSpeed = currTime;
+    lastMotorPosition = currPos;
+  }
+}
+
 float getMotorSpeed() {
-  return retpwm;  
+//  return retpwm;  This will vary with motor voltage
+  return motorSpeed * 10;
 }
 
 

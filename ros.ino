@@ -25,7 +25,7 @@ void setupROS() {
 
 // Data Rate Attenuation
 long int lastPubTime = 0;
-int dataRate  = 20; // ms or 50Hz
+int dataRate  = 100; // ms or 10Hz
 
 void runROS() {
   long int time = millis();
