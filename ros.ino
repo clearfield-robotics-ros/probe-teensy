@@ -16,6 +16,7 @@ void probeCmdClbk(const std_msgs::Int16& msg);
 ros::Subscriber<std_msgs::Int16> probe_cmd_sub("probe_cmd_send", probeCmdClbk);
 
 void setupROS() {
+  nh.getHardware()->setBaud(115200);
   nh.initNode();
   broadcaster.init(nh);
   nh.subscribe(probe_cmd_sub);
@@ -43,8 +44,15 @@ void runROS() {
     t.transform.rotation = tf::createQuaternionFromYaw(0);
     t.header.stamp = nh.now();
     broadcaster.sendTransform(t);
+
+    if (contact_flag) {
+      sendMsg(probe_contact_reply, probe_contact_reply_pub);
+      contact_flag = false;
+    }
+    
+    nh.spinOnce();
   }
-  nh.spinOnce();
+
 }
 
 void ROSContactMsg() {

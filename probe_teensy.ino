@@ -1,4 +1,4 @@
-// Code for Probe Linear Actuation System
+  // Code for Probe Linear Actuation System
 // Author: David Robinson
 
 #include <ros.h>
@@ -37,7 +37,8 @@ static int initialState = 0;
 #define PROBE 2
 #define CALIB 3
 
-bool debug = true;
+bool debug = false;
+bool contact_flag = false;
 
 void setup() {
   setupLoadCell();
@@ -154,12 +155,20 @@ void calibration() {
       Serial.print("Calibrated with Maximum Force of ");
       Serial.println(maxCalibForce);
     }
+    
+    runMotor(0);
+    delay(500);
+    
     calibrated = true;
     setState(ZERO);
   }
   else if (getRawForce() > forceLimit) {
     if (debug)
       Serial.println("Exited because safe load cell force exceeded");
+    
+    runMotor(0);
+    delay(500);
+    
     calibrated = true;
     setState(ZERO);
   }
@@ -230,7 +239,7 @@ void exitProbe(int exitCode) {
       break;
     case 1:
       if (debug) Serial.println("Max Calibration Force Exceeded");
-      object = true;
+//      object = true;
       break;
     case 2:
       if (debug) Serial.println("End of Linear Travel");
@@ -241,7 +250,8 @@ void exitProbe(int exitCode) {
       break;
   }
 
-  if (!debug) ROSContactMsg();
+//  if (!debug) ROSContactMsg();
+  if (!debug) contact_flag = true;
 }
 
 bool objectFound() {
