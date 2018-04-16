@@ -129,8 +129,8 @@ void idle()
 ///////////////////////////
 
 static float forceLimit = 8.0f;   // safety
-float maxCalibForce = 0.0f;       // hardcoded for speed of demo
-bool calibrated = false;          // hardcoded for speed of demo
+float maxCalibForce = 8.0f;       // hardcoded for speed of demo
+bool calibrated = true;           // hardcoded for speed of demo
 
 void enterCalibration() {
   maxCalibForce = 0.0f;
